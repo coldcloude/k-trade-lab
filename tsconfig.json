@@ -1,0 +1,8 @@
+{
+    "extends": "../kai2/tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": "dist",
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules","src/__test__/**/*"],
+}
