@@ -203,31 +203,34 @@ function priceByDelta(pricing:PricingFunction, target:number, k:number, r:number
 }
 
 export abstract class PricingModel{
-    abstract price(s:number, k:number, r:number, sigma:number, ytm:number, d:number):number;
+    abstract pricing(s:number, k:number, r:number, sigma:number, ytm:number, d:number):number;
+    price(s:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+        return this.pricing(s,k,r,sigma,ytm(day,mday),d);
+    }
     delta(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
-        return delta(this.price,f,k,r,sigma,ytm(day,mday),d);
+        return delta(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
     gamma(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
-        return gamma(this.price,f,k,r,sigma,ytm(day,mday),d);
+        return gamma(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
     theta(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
-        return theta(this.price,f,k,r,sigma,ytm(day,mday),d);
+        return theta(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
     vega(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
-        return vega(this.price,f,k,r,sigma,ytm(day,mday),d);
+        return vega(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
     rho(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
-        return rho(this.price,f,k,r,sigma,ytm(day,mday),d);
+        return rho(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
     implVol(p:number, s:number, k:number, r:number, day:Date|number, mday:Date|number, d:number, args:{
         minPriceTick?: number,
         maxImplVol?: number
     }){
-        return implVol(this.price,p,s,k,r,ytm(day,mday),d,args);
+        return implVol(this.pricing,p,s,k,r,ytm(day,mday),d,args);
     }
     priceByDelta(target:number, k:number, r:number, sigmac:number, sigmap:number, day:Date|number, mday:Date|number, nc:number, np:number, args:{
         minPriceTick?: number
     }){
-        return priceByDelta(this.price,target,k,r,sigmac,sigmap,ytm(day,mday),nc,np,args);
+        return priceByDelta(this.pricing,target,k,r,sigmac,sigmap,ytm(day,mday),nc,np,args);
     }
 }
