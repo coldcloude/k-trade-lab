@@ -1,16 +1,42 @@
-import { MS_OF_DAY } from "@coldcloude/kai2";
+import { DateFormat, MS_OF_DAY } from "@coldcloude/kai2";
 
 export const DAY_OF_YEAR = 365;
 
-export function dtm(day:Date|number,mday:Date|number):number{
-    const dt = day instanceof Date?day.getTime()/MS_OF_DAY:day as number;
-    const mdt = mday instanceof Date?mday.getTime()/MS_OF_DAY:mday as number;
-    return Math.round(mdt-dt)|0;
+export type Day = Date|number;
+
+const dutil = new DateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+const ANCHOR = dutil.parse("2000-01-01 00:00:00.000").getTime();
+
+export function dayoff(day:Day,anchor?:Day){
+    if(day instanceof Date){
+        const an = anchor===undefined?ANCHOR:(anchor as Date).getTime();
+        return (day.getTime()-an)/MS_OF_DAY;
+    }
+    else{
+        const d = day as number;
+        return isNaN(d)||anchor===undefined?d:d-(anchor as number);
+    }
 }
 
-export function ytm(day:Date|number,mday:Date|number):number{
-    return dtm(day,mday)/DAY_OF_YEAR;
+export function dtm(day:Day,mday:Day):number{
+    const d = dayoff(day);
+    const md = dayoff(mday);
+    return isNaN(d)||isNaN(md)?Number.NaN:(dayoff(mday)-dayoff(day))|0;
 }
+
+export function ytm(day:Day,mday:Day):number{
+    const dd = dtm(day,mday);
+    return isNaN(dd)?Number.NaN:dd/DAY_OF_YEAR;
+}
+
+export const daycmp = (a:Day,b:Day)=>{
+	return dtm(a,b);
+};
+
+export const dayhash = (d:Day)=>{
+	return dayoff(d)&0x7FFFFFFF;
+};
 
 export type Price = {
     ask:number,
