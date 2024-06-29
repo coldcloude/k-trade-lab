@@ -1,4 +1,4 @@
-import { DAY_OF_YEAR, ytm } from "../ktl.js";
+import { DAY_OF_YEAR, Day, ytm } from "../ktl.js";
 
 const EPSILON = 1e-9;
 
@@ -119,7 +119,7 @@ function rho(pricing:PricingFunction, f:number, k:number, r:number, sigma:number
  * @param ytm 到期时间（年）
  * @param d 1=call；2=put
  */
-function implVol(pricing:PricingFunction, p:number, s:number, k:number, r:number, ytm:number, d:number, args:{
+function implVol(pricing:PricingFunction, p:number, s:number, k:number, r:number, ytm:number, d:number, args?:{
     minPriceTick?: number,
     maxImplVol?: number
 }){
@@ -178,7 +178,7 @@ function implVol(pricing:PricingFunction, p:number, s:number, k:number, r:number
  * @param np put期权数量
  * @param mm 
  */
-function priceByDelta(pricing:PricingFunction, target:number, k:number, r:number, sigmac:number, sigmap:number, ytm:number, nc:number, np:number, args:{
+function priceByDelta(pricing:PricingFunction, target:number, k:number, r:number, sigmac:number, sigmap:number, ytm:number, nc:number, np:number, args?:{
     minPriceTick?: number
 }){
     if(target <= -np || target >= nc || sigmac <= 0 || sigmap <=0){
@@ -204,31 +204,31 @@ function priceByDelta(pricing:PricingFunction, target:number, k:number, r:number
 
 export abstract class PricingModel{
     abstract pricing(s:number, k:number, r:number, sigma:number, ytm:number, d:number):number;
-    price(s:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    price(s:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return this.pricing(s,k,r,sigma,ytm(day,mday),d);
     }
-    delta(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    delta(f:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return delta(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
-    gamma(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    gamma(f:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return gamma(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
-    theta(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    theta(f:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return theta(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
-    vega(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    vega(f:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return vega(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
-    rho(f:number, k:number, r:number, sigma:number, day:Date|number, mday:Date|number, d:number){
+    rho(f:number, k:number, r:number, sigma:number, day:Day, mday:Day, d:number){
         return rho(this.pricing,f,k,r,sigma,ytm(day,mday),d);
     }
-    implVol(p:number, s:number, k:number, r:number, day:Date|number, mday:Date|number, d:number, args:{
+    implVol(p:number, s:number, k:number, r:number, day:Day, mday:Day, d:number, args?:{
         minPriceTick?: number,
         maxImplVol?: number
     }){
         return implVol(this.pricing,p,s,k,r,ytm(day,mday),d,args);
     }
-    priceByDelta(target:number, k:number, r:number, sigmac:number, sigmap:number, day:Date|number, mday:Date|number, nc:number, np:number, args:{
+    priceByDelta(target:number, k:number, r:number, sigmac:number, sigmap:number, day:Day, mday:Day, nc:number, np:number, args?:{
         minPriceTick?: number
     }){
         return priceByDelta(this.pricing,target,k,r,sigmac,sigmap,ytm(day,mday),nc,np,args);
