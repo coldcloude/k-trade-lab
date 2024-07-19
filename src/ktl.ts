@@ -8,21 +8,29 @@ const dutil = new DateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
 const ANCHOR = dutil.parse("2000-01-01 00:00:00.000").getTime();
 
-export function dayoff(day:Day,anchor?:Day){
+export function dayn(day:Day):number{
     if(day instanceof Date){
-        const an = anchor===undefined?ANCHOR:(anchor as Date).getTime();
-        return (day.getTime()-an)/MS_OF_DAY;
+        return (day.getTime()-ANCHOR)/MS_OF_DAY;
     }
     else{
-        const d = day as number;
-        return isNaN(d)||anchor===undefined?d:d-(anchor as number);
+        return day as number;
+    }
+}
+
+export function dayd(day:Day):Date{
+    if(day instanceof Date){
+        return day as Date;
+    }
+    else {
+        const time = Math.round((day as number)*MS_OF_DAY+ANCHOR)|0;
+        return new Date(time);
     }
 }
 
 export function dtm(day:Day,mday:Day):number{
-    const d = dayoff(day);
-    const md = dayoff(mday);
-    return isNaN(d)||isNaN(md)?Number.NaN:(dayoff(mday)-dayoff(day))|0;
+    const d = dayn(day);
+    const md = dayn(mday);
+    return isNaN(d)||isNaN(md)?Number.NaN:md-d;
 }
 
 export function ytm(day:Day,mday:Day):number{
@@ -35,7 +43,7 @@ export const daycmp = (a:Day,b:Day)=>{
 };
 
 export const dayhash = (d:Day)=>{
-	return dayoff(d)&0x7FFFFFFF;
+	return dayn(d)&0x7FFFFFFF;
 };
 
 export type Price = {
@@ -73,12 +81,12 @@ export function price(last:number,bid:number,ask:number,args?:{
     return r;
 }
 
-function numberOrUndefined<T>(v:T):number{
-    return typeof v === typeof 1 ? v as number : Number.NaN;
+function numberOrNot<T>(v:T):number{
+    return typeof v === "number" ? v as number : Number.NaN;
 }
 
 export function highOf<T>(vs:T[],op?:(v:T)=>number):T|undefined{
-    const fop:(v:T)=>number = op||numberOrUndefined;
+    const fop:(v:T)=>number = op||numberOrNot;
     let cv:number = Number.NaN;
     let r:T|undefined = undefined;
     for(const v of vs){
@@ -92,7 +100,7 @@ export function highOf<T>(vs:T[],op?:(v:T)=>number):T|undefined{
 }
 
 export function lowOf<T>(vs:T[],op?:(v:T)=>number):T|undefined{
-    const fop:(v:T)=>number = op||numberOrUndefined;
+    const fop:(v:T)=>number = op||numberOrNot;
     let cv:number = Number.NaN;
     let r:T|undefined = undefined;
     for(const v of vs){
@@ -106,7 +114,7 @@ export function lowOf<T>(vs:T[],op?:(v:T)=>number):T|undefined{
 }
 
 export function anyValid<T>(vs:T[],op?:(v:T)=>number):boolean{
-    const fop:(v:T)=>number = op||numberOrUndefined;
+    const fop:(v:T)=>number = op||numberOrNot;
     let r = false;
     for(const v of vs){
         if(!isNaN(fop(v))){
@@ -118,7 +126,7 @@ export function anyValid<T>(vs:T[],op?:(v:T)=>number):boolean{
 }
 
 export function allValid<T>(vs:T[],op?:(v:T)=>number):boolean{
-    const fop:(v:T)=>number = op||numberOrUndefined;
+    const fop:(v:T)=>number = op||numberOrNot;
     let r = true;
     for(const v of vs){
         if(isNaN(fop(v))){
