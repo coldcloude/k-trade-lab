@@ -1,8 +1,8 @@
-import { fromArray, fromObject, KList, KMap, KObject, KSerializable, KValue, rawFromArray, rawToArray, toObjArray, toValObject } from "@coldcloude/kai2";
-import { Day, dayn } from "./ktl";
-import { Black76Model, BlackScholesModel, PricingModel } from "./ktl-option";
-import { marginOption } from "./ktl-margin";
-import { Asset, AssetOption, ASSET_GENERAL, ASSET_FUTURE, ASSET_OPTION, findAsset } from "./ktl-asset";
+import { fromArray, fromObject, KHashTable, KList, KMap, KObject, KSerializable, KValue, numcmp, numhash, rawFromArray, rawToArray, toObjArray, toValObject } from "@coldcloude/kai2";
+import { Day, dayn } from "./ktl.js";
+import { Black76Model, BlackScholesModel, PricingModel } from "./ktl-option.js";
+import { marginOption } from "./ktl-margin.js";
+import { Asset, AssetOption, ASSET_GENERAL, ASSET_FUTURE, ASSET_OPTION, findAsset } from "./ktl-asset.js";
 
 export class Trade implements KSerializable{
     readonly id:number;
@@ -37,11 +37,36 @@ export class Trade implements KSerializable{
     }
 }
 
+export class MarketSnapshot implements KSerializable{
+    readonly id:number;
+    readonly day:Day;
+    readonly rate:number;
+    readonly prices:KMap<string,number>;
+    readonly margins:KMap<string,number>;
+    constructor(ss:KObject){
+        this.id = ss.id as number;
+        this.day = ss.day as number;
+        this.rate = ss.rate as number;
+        this.prices = fromObject(ss.prices as KObject,v=>v as number);
+        this.margins = fromObject(ss.margins as KObject,v=>v as number);
+    }
+    toObj():KObject{
+        return {
+            id: this.id,
+            day: dayn(this.day),
+            rate: this.rate,
+            prices: toValObject(this.prices),
+            margins: toValObject(this.margins)
+        };
+    }
+}
+
 const blackscholes = new BlackScholesModel();
 
 const black76 = new Black76Model();
 
 export class TradePosition implements KSerializable{
+    tx:TradeTransaction;
     trade:Trade;
     amount:number;
     day:Day = Number.NaN;
@@ -54,7 +79,8 @@ export class TradePosition implements KSerializable{
     theta:number = 0;
     vega:number = 0;
     rho:number = 0;
-    constructor(tradeX:Trade|KObject,amount?:number,underlyingPrice?:number){
+    constructor(tx:TradeTransaction,tradeX:Trade|KObject,amount?:number,underlyingPrice?:number){
+        this.tx = tx;
         if(tradeX instanceof Trade){
             this.trade = tradeX as Trade;
             this.amount = amount!;
@@ -62,23 +88,30 @@ export class TradePosition implements KSerializable{
         }
         else{
             const pos = tradeX as KObject;
-            this.trade = new Trade(pos.trade as KObject);
-            this.amount = pos.amount as number;
-            this.day = pos.day as number;
-            this.rate = pos.rate as number;
-            this.price = pos.price as number;
-            this.profit = pos.profit as number;
-            this.iv = pos.iv as number;
-            this.delta = pos.delta as number;
-            this.gamma = pos.gamma as number;
-            this.theta = pos.theta as number;
-            this.vega = pos.vega as number;
-            this.rho = pos.rho as number;
+            const trid = tradeX.trade as number;
+            const ftr = tx.trades.get(trid);
+            if(ftr===undefined){
+                throw new Error("no trade '"+trid+"' found");
+            }
+            else{
+                this.trade = ftr;
+                this.amount = pos.amount as number;
+                this.day = pos.day as number;
+                this.rate = pos.rate as number;
+                this.price = pos.price as number;
+                this.profit = pos.profit as number;
+                this.iv = pos.iv as number;
+                this.delta = pos.delta as number;
+                this.gamma = pos.gamma as number;
+                this.theta = pos.theta as number;
+                this.vega = pos.vega as number;
+                this.rho = pos.rho as number;
+            }
         }
     }
     toObj():KObject{
         return {
-            trade: this.trade.toObj(),
+            trade: this.trade.id,
             amount: this.amount,
             day: dayn(this.day),
             rate: this.rate,
@@ -128,31 +161,8 @@ export class TradePosition implements KSerializable{
     }
 }
 
-export class MarketSnapshot implements KSerializable{
-    readonly id:number;
-    readonly day:Day;
-    readonly rate:number;
-    readonly prices:KMap<string,number>;
-    readonly margins:KMap<string,number>;
-    constructor(ss:KObject){
-        this.id = ss.id as number;
-        this.day = ss.day as number;
-        this.rate = ss.rate as number;
-        this.prices = fromObject(ss.prices as KObject,v=>v as number);
-        this.margins = fromObject(ss.margins as KObject,v=>v as number);
-    }
-    toObj():KObject{
-        return {
-            id: this.id,
-            day: dayn(this.day),
-            rate: this.rate,
-            prices: toValObject(this.prices),
-            margins: toValObject(this.margins)
-        };
-    }
-}
-
 export class PortfolioSnapshot implements KSerializable{
+    tx:TradeTransaction;
     snapshot:MarketSnapshot;
     profit:number = 0;
     margin:number = 0;
@@ -161,25 +171,33 @@ export class PortfolioSnapshot implements KSerializable{
     theta:number = 0;
     vega:number = 0;
     rho:number = 0;
-    constructor(snapshotX:MarketSnapshot|KObject){
+    constructor(tx:TradeTransaction,snapshotX:MarketSnapshot|KObject){
+        this.tx = tx;
         if(snapshotX instanceof MarketSnapshot){
             this.snapshot = snapshotX as MarketSnapshot;
         }
         else{
             const ss = snapshotX as KObject;
-            this.snapshot = new MarketSnapshot(ss.snapshot as KObject);
-            this.profit = ss.profit as number;
-            this.margin = ss.margin as number;
-            this.delta = ss.delta as number;
-            this.gamma = ss.gamma as number;
-            this.theta = ss.theta as number;
-            this.vega = ss.vega as number;
-            this.rho = ss.rho as number;
+            const ssid = ss.snapshot as number;
+            const fss = tx.snapshots.get(ssid);
+            if(fss===undefined){
+                throw new Error("no snapshot '"+ssid+"' found");
+            }
+            else{
+                this.snapshot = fss;
+                this.profit = ss.profit as number;
+                this.margin = ss.margin as number;
+                this.delta = ss.delta as number;
+                this.gamma = ss.gamma as number;
+                this.theta = ss.theta as number;
+                this.vega = ss.vega as number;
+                this.rho = ss.rho as number;
+            }
         }
     }
     toObj():KObject{
         return {
-            snapshot: this.snapshot.toObj(),
+            snapshot: this.snapshot.id,
             profit: this.profit,
             margin: this.margin,
             delta: this.delta,
@@ -192,44 +210,36 @@ export class PortfolioSnapshot implements KSerializable{
 }
 
 export class TradePortfolio implements KSerializable{
-    //positions
+    tx:TradeTransaction;
+    day:Day;
     positions:KList<TradePosition>;
     snapshots:PortfolioSnapshot[];
     cost = 0;
     income = 0;
-    constructor(pf?:KObject){
-        if(pf!==undefined){
-            this.positions = fromArray(pf.positions as KValue[],v=>new TradePosition(v as KObject));
-            this.snapshots = rawFromArray(pf.snapshots as KValue[],v=>new PortfolioSnapshot(v as KObject));
-            this.cost = pf.cost as number;
-            this.income = pf.income as number;
-        }
-        else{
+    constructor(tx:TradeTransaction,dayX:Day|KObject){
+        this.tx = tx;
+        if(typeof dayX === "number" || dayX instanceof Date){
+            this.day = dayX as Day;
             this.positions = new KList<TradePosition>();
             this.snapshots = [];
+        }
+        else{
+            const pf = dayX as KObject;
+            this.day = pf.day as number;
+            this.positions = fromArray(pf.positions as KValue[],v=>new TradePosition(tx,v as KObject));
+            this.snapshots = rawFromArray(pf.snapshots as KValue[],v=>new PortfolioSnapshot(tx,v as KObject));
+            this.cost = pf.cost as number;
+            this.income = pf.income as number;
         }
     }
     toObj():KObject{
         return {
+            day: dayn(this.day),
             positions: toObjArray(this.positions),
             snapshots: rawToArray(this.snapshots),
             cost: this.cost,
             income: this.income
         };
-    }
-    clone(ss?:boolean){
-        const r = new TradePortfolio();
-        this.positions.foreach(tp=>{
-            r.positions.push(tp);
-        });
-        r.cost = this.cost;
-        r.income = this.income;
-        if(ss){
-            for(const ss of this.snapshots){
-                r.snapshots.push(ss);
-            }
-        }
-        return r;
     }
     trade(tr:Trade,underlyingPrice?:number){
         //calc cost and income
@@ -273,12 +283,12 @@ export class TradePortfolio implements KSerializable{
         });
         //open new position
         if(amount!==0){
-            this.positions.push(new TradePosition(tr,amount,underlyingPrice));
+            this.positions.push(new TradePosition(this.tx,tr,amount,underlyingPrice));
         }
     }
     snapshot(ss:MarketSnapshot):string|undefined{
         let error:string|undefined = undefined;
-        const pfss = new PortfolioSnapshot(ss);
+        const pfss = new PortfolioSnapshot(this.tx,ss);
         //calculate profit and greeks
         this.positions.foreach(p=>{
             const asset = p.trade.asset;
@@ -361,6 +371,8 @@ export class TradePortfolio implements KSerializable{
 
 export class TradeTransaction{
     id:number;
+    trades = new KHashTable<number,Trade>(numcmp,numhash);
+    snapshots = new KHashTable<number,MarketSnapshot>(numcmp,numhash);
     portfolios:TradePortfolio[];
     constructor(idX:number|KObject){
         if(typeof idX === "number"){
@@ -370,12 +382,29 @@ export class TradeTransaction{
         else{
             const ttx = idX as KObject;
             this.id = ttx.id as number;
-            this.portfolios = rawFromArray(idX.portfolios as KValue[],v=>new TradePortfolio(v as KObject));
+            for(const tr of idX.trades as KObject[]){
+                const trade = new Trade(tr);
+                this.trades.set(trade.id,trade);
+            }
+            for(const ss of idX.snapshots as KObject[]){
+                const snapshot = new MarketSnapshot(ss);
+                this.snapshots.set(snapshot.id,snapshot);
+            }
+            this.portfolios = rawFromArray(idX.portfolios as KValue[],v=>new TradePortfolio(this,v as KObject));
         }
     }
+    toObj(){
+        return {
+            id: this.id,
+            trades: rawToArray(this.trades.valueToArray()),
+            snapshots: rawToArray(this.snapshots.valueToArray()),
+            portfolios: rawToArray(this.portfolios)
+        } as KObject;
+    }
     trade(tr:Trade):number{
+        this.trades.set(tr.id,tr);
         const index = this.portfolios.length;
-        const portfolio = this.portfolios[index-1].clone();
+        const portfolio = new TradePortfolio(this,this.portfolios[index-1].toObj());
         portfolio.trade(tr);
         this.portfolios.push(portfolio);
         return index;
@@ -385,6 +414,7 @@ export class TradeTransaction{
             return "not a valid index = "+index+", current length = "+this.portfolios.length;
         }
         else{
+            this.snapshots.set(ss.id,ss);
             return this.portfolios[index].snapshot(ss);
         }
     }

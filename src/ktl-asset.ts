@@ -1,5 +1,5 @@
 import { KHashTable, KMap, KObject, KSerializable, setFromArray, strcmp, strhash } from "@coldcloude/kai2";
-import { Day, dayn } from "./ktl";
+import { Day, dayn } from "./ktl.js";
 
 export const ASSET_GENERAL = 0|0;
 export const ASSET_FUTURE = 1|0;
@@ -19,7 +19,7 @@ export function findAsset(name:string){
         return r;
     }
     else{
-        throw "no asset '"+name+"' found";
+        throw new Error("no asset '"+name+"' found");
     }
 }
 
@@ -65,7 +65,7 @@ export class AssetFuture extends Asset{
         }
         else{
             this.mature = nameX.mature as number;
-            this.underlying = findAsset(nameX.underlying as string)!;
+            this.underlying = findAsset(nameX.underlying as string);
         }
     }
     toObj():KObject{

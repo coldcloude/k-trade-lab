@@ -64,16 +64,6 @@ ktl_market_price_day
 |volume|成交量|long||
 |position|持仓量|long||
 
-# 交易事务表
-## 表名
-ktl_trade_transaction
-## 列
-|名称|中文说明|类型|备注|
-|----|----|----|----|
-|ttx_id|交易事务ID|number||
-|ttx_name|交易事务名称|string||
-|ttx_desc|交易事务说明|string||
-
 # 交易表
 ## 表名
 ktl_trade
@@ -90,7 +80,6 @@ ktl_trade
 |rate|利率|number||
 |price|价格|number||
 |fee|费用|number||
-|order|在交易事务中的顺序|number|和snapshot共同排序|
 
 # 交易市场快照表
 ## 表名
@@ -98,12 +87,11 @@ ktl_trade_market_snapshot
 ## 列
 |名称|中文说明|类型|备注|
 |----|----|----|----|
-|ss_id|快照ID|number|交易事务ID*1000000+自增序号|
+|ss_id|市场快照ID|number|交易事务ID*1000000+自增序号|
 |ttx_id|交易事务ID|number|关联ktl_trade_transaction表|
-|ss_date|快照日期|string|格式：yyyyMMdd|
-|ss_time|快照时间|string|格式：yyyyMMddHHmmss|
+|ss_date|市场快照日期|string|格式：yyyyMMdd|
+|ss_time|市场快照时间|string|格式：yyyyMMddHHmmss|
 |rate|利率|number||
-|order|在交易事务中的顺序|number|和trade共同排序|
 
 # 交易市场快照价格表
 ## 表名
@@ -111,10 +99,10 @@ ktl_trade_market_snapshot_price
 ## 列
 |名称|中文说明|类型|备注|
 |----|----|----|----|
-|ss_id|快照ID|number|交易事务ID*1000000+自增序号|
+|ss_id|市场快照ID|number|交易事务ID*1000000+自增序号|
 |ttx_id|交易事务ID|number|关联ktl_trade_transaction表|
-|ss_date|快照日期|string|格式：yyyyMMdd|
-|ss_time|快照时间|string|格式：yyyyMMddHHmmss|
+|ss_date|市场快照日期|string|格式：yyyyMMdd|
+|ss_time|市场快照时间|string|格式：yyyyMMddHHmmss|
 |asset_name|证券资产名称|string||
 |price|价格|number||
 |margin|保证金率|number||
@@ -151,6 +139,26 @@ ktl_trade_position
 |vega|希腊字母Vega|number||
 |rho|希腊字母Rho|number||
 
+# 资产组合快照表
+## 表名
+ktl_trade_portfolio_snapshot
+## 列
+|名称|中文说明|类型|备注|
+|----|----|----|----|
+|ss_index|交易组合快照索引number|在一个投资组合中递增|
+|pf_index|投资组合索引number|在一个交易事务中递增|
+|ss_id|市场快照ID|number|交易事务ID*1000000+自增序号|
+|ttx_id|交易事务ID|number|关联ktl_trade_transaction表|
+|ss_date|市场快照日期|string|格式：yyyyMMdd|
+|ss_time|市场快照时间|string|格式：yyyyMMddHHmmss|
+|profit|盈利|number||
+|margin|保证金|number||
+|delta|希腊字母Delta|number||
+|gamma|希腊字母Gamma|number||
+|theta|希腊字母Theta|number||
+|vega|希腊字母Vega|number||
+|rho|希腊字母Rho|number||
+
 # 投资组合表
 ## 表名
 ktl_trade_portfolio
@@ -164,24 +172,12 @@ ktl_trade_portfolio
 |cost|成本|number||
 |income|收入|number||
 
-# 资产组合快照表
+# 交易事务表
 ## 表名
-ktl_trade_portfolio_snapshot
+ktl_trade_transaction
 ## 列
 |名称|中文说明|类型|备注|
 |----|----|----|----|
-|pf_id|投资组合ID|number|交易事务ID*1000000+自增序号|
-|ss_id|快照ID|number|交易事务ID*1000000+自增序号|
-|tr_id|交易ID|number|关联ktl_trade表|
-|ttx_id|交易事务ID|number|关联ktl_trade_transaction表|
-|pf_date|投资组合日期|string|格式：yyyyMMdd|
-|pf_time|投资组合时间|string|格式：yyyyMMddHHmmss|
-|ss_date|快照日期|string|格式：yyyyMMdd|
-|ss_time|快照时间|string|格式：yyyyMMddHHmmss|
-|profit|盈利|number||
-|margin|保证金|number||
-|delta|希腊字母Delta|number||
-|gamma|希腊字母Gamma|number||
-|theta|希腊字母Theta|number||
-|vega|希腊字母Vega|number||
-|rho|希腊字母Rho|number||
+|ttx_id|交易事务ID|number||
+|ttx_name|交易事务名称|string||
+|ttx_desc|交易事务说明|string||
