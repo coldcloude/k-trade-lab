@@ -1,4 +1,4 @@
-import { fromArray, fromObject, KHashTable, KList, KMap, KObject, KSerializable, KValue, numcmp, numhash, rawFromArray, rawToArray, toObjArray, toValObject } from "@coldcloude/kai2";
+import { arraySerialize, deserializeArray, deserializeList, deserializeMap, KHashTable, KList, KMap, KObject, KSerializable, KValue, numcmp, numhash, objListSerialize, valMapSerialize } from "@coldcloude/kai2";
 import { Day, dayn } from "./ktl.js";
 import { Black76Model, BlackScholesModel, PricingModel } from "./ktl-option.js";
 import { marginOption } from "./ktl-margin.js";
@@ -23,7 +23,7 @@ export class Trade implements KSerializable{
         this.price = tr.price as number;
         this.fee = tr.fee as number;
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             id: this.id,
             asset: this.asset.name,
@@ -47,16 +47,16 @@ export class MarketSnapshot implements KSerializable{
         this.id = ss.id as number;
         this.day = ss.day as number;
         this.rate = ss.rate as number;
-        this.prices = fromObject(ss.prices as KObject,v=>v as number);
-        this.margins = fromObject(ss.margins as KObject,v=>v as number);
+        this.prices = deserializeMap(ss.prices as KObject,v=>v as number);
+        this.margins = deserializeMap(ss.margins as KObject,v=>v as number);
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             id: this.id,
             day: dayn(this.day),
             rate: this.rate,
-            prices: toValObject(this.prices),
-            margins: toValObject(this.margins)
+            prices: valMapSerialize(this.prices),
+            margins: valMapSerialize(this.margins)
         };
     }
 }
@@ -109,7 +109,7 @@ export class TradePosition implements KSerializable{
             }
         }
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             trade: this.trade.id,
             amount: this.amount,
@@ -195,7 +195,7 @@ export class PortfolioSnapshot implements KSerializable{
             }
         }
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             snapshot: this.snapshot.id,
             profit: this.profit,
@@ -226,17 +226,17 @@ export class TradePortfolio implements KSerializable{
         else{
             const pf = dayX as KObject;
             this.day = pf.day as number;
-            this.positions = fromArray(pf.positions as KValue[],v=>new TradePosition(tx,v as KObject));
-            this.snapshots = rawFromArray(pf.snapshots as KValue[],v=>new PortfolioSnapshot(tx,v as KObject));
+            this.positions = deserializeList(pf.positions as KValue[],v=>new TradePosition(tx,v as KObject));
+            this.snapshots = deserializeArray(pf.snapshots as KValue[],v=>new PortfolioSnapshot(tx,v as KObject));
             this.cost = pf.cost as number;
             this.income = pf.income as number;
         }
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             day: dayn(this.day),
-            positions: toObjArray(this.positions),
-            snapshots: rawToArray(this.snapshots),
+            positions: objListSerialize(this.positions),
+            snapshots: arraySerialize(this.snapshots),
             cost: this.cost,
             income: this.income
         };
@@ -369,7 +369,7 @@ export class TradePortfolio implements KSerializable{
     }
 }
 
-export class TradeTransaction{
+export class TradeTransaction implements KSerializable{
     id:number;
     trades = new KHashTable<number,Trade>(numcmp,numhash);
     snapshots = new KHashTable<number,MarketSnapshot>(numcmp,numhash);
@@ -390,21 +390,21 @@ export class TradeTransaction{
                 const snapshot = new MarketSnapshot(ss);
                 this.snapshots.set(snapshot.id,snapshot);
             }
-            this.portfolios = rawFromArray(idX.portfolios as KValue[],v=>new TradePortfolio(this,v as KObject));
+            this.portfolios = deserializeArray(idX.portfolios as KValue[],v=>new TradePortfolio(this,v as KObject));
         }
     }
-    toObj(){
+    serialize(){
         return {
             id: this.id,
-            trades: rawToArray(this.trades.valueToArray()),
-            snapshots: rawToArray(this.snapshots.valueToArray()),
-            portfolios: rawToArray(this.portfolios)
+            trades: arraySerialize(this.trades.valueToArray()),
+            snapshots: arraySerialize(this.snapshots.valueToArray()),
+            portfolios: arraySerialize(this.portfolios)
         } as KObject;
     }
     trade(tr:Trade):number{
         this.trades.set(tr.id,tr);
         const index = this.portfolios.length;
-        const portfolio = new TradePortfolio(this,this.portfolios[index-1].toObj());
+        const portfolio = new TradePortfolio(this,this.portfolios[index-1].serialize());
         portfolio.trade(tr);
         this.portfolios.push(portfolio);
         return index;

@@ -46,7 +46,7 @@ export class Asset implements KSerializable{
             this.type = nameX.type as number;
         }
     }
-    toObj():KObject{
+    serialize():KObject{
         return {
             name: this.name,
             type: this.type
@@ -69,7 +69,7 @@ export class AssetFuture extends Asset{
         }
     }
     toObj():KObject{
-        const obj = super.toObj();
+        const obj = super.serialize();
         obj.mature = dayn(this.mature);
         obj.underlying = this.underlying.name;
         return obj;
